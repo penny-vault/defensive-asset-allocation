@@ -108,6 +108,11 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 		return nil
 	}
 
+	// Record all momentum scores as annotations.
+	riskMom.Annotate(p)
+	protectiveMom.Annotate(p)
+	cashMom.Annotate(p)
+
 	// 4. Count bad canary assets (B): protective assets with negative momentum.
 	badCanary := 0
 	for _, a := range protectiveMom.AssetList() {
@@ -124,6 +129,12 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 
 	// 6. Compute T = round((1 - CF) * topT)
 	t := int(math.Round((1.0 - cf) * float64(topT)))
+
+	// Record decision values as annotations.
+	ts := e.CurrentDate().Unix()
+	p.Annotate(ts, "B", fmt.Sprintf("%d", badCanary))
+	p.Annotate(ts, "CF", fmt.Sprintf("%.2f", cf))
+	p.Annotate(ts, "T", fmt.Sprintf("%d", t))
 
 	// 7. Select top-T risk assets by momentum score.
 	type assetScore struct {
@@ -165,15 +176,8 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 		}
 	}
 
-	// Build justification string with key decision values.
-	justification := fmt.Sprintf("B=%d CF=%.2f T=%d", badCanary, cf, t)
-	// add top risk scores
-	for _, rs := range topRisk {
-		justification += fmt.Sprintf(" %s=%.4f", rs.a.Ticker, rs.score)
-	}
-	if cf > 0 {
-		justification += fmt.Sprintf(" cash=%s", bestCash.Ticker)
-	}
+	// Build brief justification summary.
+	justification := fmt.Sprintf("B=%d T=%d cash=%s", badCanary, t, bestCash.Ticker)
 
 	allocation := portfolio.Allocation{
 		Date:          e.CurrentDate(),
