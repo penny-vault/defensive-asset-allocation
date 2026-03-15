@@ -46,14 +46,15 @@ func (s *DefensiveAssetAllocation) Name() string {
 	return "Defensive Asset Allocation"
 }
 
-func (s *DefensiveAssetAllocation) Setup(e *engine.Engine) {
+func (s *DefensiveAssetAllocation) Setup(eng *engine.Engine) {
 	tc, err := tradecron.New("@monthend", tradecron.MarketHours{Open: 930, Close: 1600})
 	if err != nil {
 		panic(err)
 	}
-	e.Schedule(tc)
-	e.SetBenchmark(e.Asset("VFINX"))
-	e.RiskFreeAsset(e.Asset("DGS3MO"))
+
+	eng.Schedule(tc)
+	eng.SetBenchmark(eng.Asset("VFINX"))
+	eng.RiskFreeAsset(eng.Asset("DGS3MO"))
 }
 
 func (s *DefensiveAssetAllocation) Describe() engine.StrategyDescription {
@@ -66,7 +67,7 @@ func (s *DefensiveAssetAllocation) Describe() engine.StrategyDescription {
 	}
 }
 
-func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine, p portfolio.Portfolio) error {
+func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engine, strategyPortfolio portfolio.Portfolio) error {
 	// 1. Fetch 12-month window of monthly close prices for all universes combined.
 	riskDF, err := s.RiskUniverse.Window(ctx, portfolio.Months(12), data.MetricClose)
 	if err != nil {
@@ -109,12 +110,13 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 	}
 
 	// Record all momentum scores as annotations.
-	riskMom.Annotate(p)
-	protectiveMom.Annotate(p)
-	cashMom.Annotate(p)
+	riskMom.Annotate(strategyPortfolio)
+	protectiveMom.Annotate(strategyPortfolio)
+	cashMom.Annotate(strategyPortfolio)
 
 	// 4. Count bad canary assets (B): protective assets with negative momentum.
 	badCanary := 0
+
 	for _, a := range protectiveMom.AssetList() {
 		val := protectiveMom.Value(a, data.MetricClose)
 		if val < 0 {
@@ -127,35 +129,43 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 	breadth := s.Breadth
 	cf := math.Min(1.0, math.Floor(float64(badCanary)*float64(topT)/float64(breadth))/float64(topT))
 
-	// 6. Compute T = round((1 - CF) * topT)
-	t := int(math.Round((1.0 - cf) * float64(topT)))
+	// 6. Compute numRiskAssets = round((1 - CF) * topT)
+	numRiskAssets := int(math.Round((1.0 - cf) * float64(topT)))
 
 	// Record decision values as annotations.
-	ts := e.CurrentDate().Unix()
-	p.Annotate(ts, "B", fmt.Sprintf("%d", badCanary))
-	p.Annotate(ts, "CF", fmt.Sprintf("%.2f", cf))
-	p.Annotate(ts, "T", fmt.Sprintf("%d", t))
+	ts := eng.CurrentDate().Unix()
+
+	strategyPortfolio.Annotate(ts, "B", fmt.Sprintf("%d", badCanary))
+	strategyPortfolio.Annotate(ts, "CF", fmt.Sprintf("%.2f", cf))
+	strategyPortfolio.Annotate(ts, "T", fmt.Sprintf("%d", numRiskAssets))
 
 	// 7. Select top-T risk assets by momentum score.
 	type assetScore struct {
 		a     asset.Asset
 		score float64
 	}
+
 	var riskScores []assetScore
+
 	for _, a := range riskMom.AssetList() {
 		riskScores = append(riskScores, assetScore{a: a, score: riskMom.Value(a, data.MetricClose)})
 	}
+
 	sort.Slice(riskScores, func(i, j int) bool {
 		return riskScores[i].score > riskScores[j].score
 	})
-	if t > len(riskScores) {
-		t = len(riskScores)
+
+	if numRiskAssets > len(riskScores) {
+		numRiskAssets = len(riskScores)
 	}
-	topRisk := riskScores[:t]
+
+	topRisk := riskScores[:numRiskAssets]
 
 	// 8. Select highest-momentum cash asset.
 	var bestCash asset.Asset
+
 	bestCashScore := math.Inf(-1)
+
 	for _, a := range cashMom.AssetList() {
 		val := cashMom.Value(a, data.MetricClose)
 		if val > bestCashScore {
@@ -169,24 +179,25 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 	if cf > 0 && bestCash != (asset.Asset{}) {
 		members[bestCash] = cf
 	}
-	if t > 0 {
-		riskWeight := (1.0 - cf) / float64(t)
+
+	if numRiskAssets > 0 {
+		riskWeight := (1.0 - cf) / float64(numRiskAssets)
 		for _, rs := range topRisk {
 			members[rs.a] += riskWeight
 		}
 	}
 
 	// Build brief justification summary.
-	justification := fmt.Sprintf("B=%d T=%d cash=%s", badCanary, t, bestCash.Ticker)
+	justification := fmt.Sprintf("B=%d T=%d cash=%s", badCanary, numRiskAssets, bestCash.Ticker)
 
 	allocation := portfolio.Allocation{
-		Date:          e.CurrentDate(),
+		Date:          eng.CurrentDate(),
 		Members:       members,
 		Justification: justification,
 	}
 
 	// 10. Rebalance to this allocation.
-	if err := p.RebalanceTo(ctx, allocation); err != nil {
+	if err := strategyPortfolio.RebalanceTo(ctx, allocation); err != nil {
 		return fmt.Errorf("rebalance failed: %w", err)
 	}
 
@@ -201,5 +212,6 @@ func momentum12631(df *data.DataFrame) *data.DataFrame {
 	mom3 := df.Pct(3).MulScalar(4)
 	mom6 := df.Pct(6).MulScalar(2)
 	mom12 := df.Pct(12)
+
 	return mom1.Add(mom3).Add(mom6).Add(mom12).DivScalar(4)
 }
