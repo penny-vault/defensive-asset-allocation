@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"math"
 	"sort"
 	"time"
@@ -14,6 +15,9 @@ import (
 	"github.com/penny-vault/pvbt/universe"
 	"github.com/rs/zerolog"
 )
+
+//go:embed README.md
+var description string
 
 type DefensiveAssetAllocation struct {
 	RiskUniverse       universe.Universe `pvbt:"risk-universe" desc:"List of ETF, Mutual Fund, or Stock tickers in the risk universe" default:"SPY,IWM,QQQ,VGK,EWJ,VWO,VNQ,GSG,GLD,TLT,HYG,LQD" suggest:"DAA-G12=SPY,IWM,QQQ,VGK,EWJ,VWO,VNQ,GSG,GLD,TLT,HYG,LQD|DAA-G6=SPY,VEA,VWO,LQD,TLT,HYG"`
@@ -40,7 +44,7 @@ func (s *DefensiveAssetAllocation) Setup(e *engine.Engine) {
 func (s *DefensiveAssetAllocation) Describe() engine.StrategyDescription {
 	return engine.StrategyDescription{
 		ShortCode:   "daa",
-		Description: "Keller's Defensive Asset Allocation with canary crash protection and Momentum12631 scoring.",
+		Description: description,
 		Source:      "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3212862",
 		Version:     "1.0.0",
 		VersionDate: time.Date(2026, 3, 14, 0, 0, 0, 0, time.UTC),
