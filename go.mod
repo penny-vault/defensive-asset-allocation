@@ -4,10 +4,7 @@ go 1.25.6
 
 replace github.com/penny-vault/pvbt => /Users/jdf/Developer/penny-vault/pvbt
 
-require (
-	github.com/penny-vault/pvbt v0.0.0-00010101000000-000000000000
-	github.com/rs/zerolog v1.34.0
-)
+require github.com/penny-vault/pvbt v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/NimbleMarkets/ntcharts v0.4.0 // indirect
@@ -43,6 +40,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect

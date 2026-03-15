@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -28,7 +29,6 @@ import (
 	"github.com/penny-vault/pvbt/portfolio"
 	"github.com/penny-vault/pvbt/tradecron"
 	"github.com/penny-vault/pvbt/universe"
-	"github.com/rs/zerolog"
 )
 
 //go:embed README.md
@@ -66,26 +66,21 @@ func (s *DefensiveAssetAllocation) Describe() engine.StrategyDescription {
 	}
 }
 
-func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine, p portfolio.Portfolio) {
-	log := zerolog.Ctx(ctx)
-
+func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine, p portfolio.Portfolio) error {
 	// 1. Fetch 12-month window of monthly close prices for all universes combined.
 	riskDF, err := s.RiskUniverse.Window(ctx, portfolio.Months(12), data.MetricClose)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to fetch risk universe prices")
-		return
+		return fmt.Errorf("failed to fetch risk universe prices: %w", err)
 	}
 
 	protectiveDF, err := s.ProtectiveUniverse.Window(ctx, portfolio.Months(12), data.MetricClose)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to fetch protective universe prices")
-		return
+		return fmt.Errorf("failed to fetch protective universe prices: %w", err)
 	}
 
 	cashDF, err := s.CashUniverse.Window(ctx, portfolio.Months(12), data.MetricClose)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to fetch cash universe prices")
-		return
+		return fmt.Errorf("failed to fetch cash universe prices: %w", err)
 	}
 
 	// 2. Downsample to monthly frequency (use last value in each month).
@@ -95,7 +90,7 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 
 	// Need at least 13 rows for Pct(12) to produce a valid value.
 	if riskMonthly.Len() < 13 || protectiveMonthly.Len() < 13 || cashMonthly.Len() < 13 {
-		return
+		return nil
 	}
 
 	// 3. Compute Momentum12631 for each asset.
@@ -110,7 +105,7 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 	cashMom = cashMom.Drop(math.NaN()).Last()
 
 	if riskMom.Len() == 0 || protectiveMom.Len() == 0 || cashMom.Len() == 0 {
-		return
+		return nil
 	}
 
 	// 4. Count bad canary assets (B): protective assets with negative momentum.
@@ -170,15 +165,28 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, e *engine.Engine
 		}
 	}
 
+	// Build justification string with key decision values.
+	justification := fmt.Sprintf("B=%d CF=%.2f T=%d", badCanary, cf, t)
+	// add top risk scores
+	for _, rs := range topRisk {
+		justification += fmt.Sprintf(" %s=%.4f", rs.a.Ticker, rs.score)
+	}
+	if cf > 0 {
+		justification += fmt.Sprintf(" cash=%s", bestCash.Ticker)
+	}
+
 	allocation := portfolio.Allocation{
-		Date:    e.CurrentDate(),
-		Members: members,
+		Date:          e.CurrentDate(),
+		Members:       members,
+		Justification: justification,
 	}
 
 	// 10. Rebalance to this allocation.
 	if err := p.RebalanceTo(ctx, allocation); err != nil {
-		log.Error().Err(err).Msg("rebalance failed")
+		return fmt.Errorf("rebalance failed: %w", err)
 	}
+
+	return nil
 }
 
 // momentum12631 computes the Momentum12631 score:
