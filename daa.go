@@ -54,7 +54,6 @@ func (s *DefensiveAssetAllocation) Setup(eng *engine.Engine) {
 
 	eng.Schedule(tc)
 	eng.SetBenchmark(eng.Asset("VFINX"))
-	eng.RiskFreeAsset(eng.Asset("DGS3MO"))
 }
 
 func (s *DefensiveAssetAllocation) Describe() engine.StrategyDescription {
