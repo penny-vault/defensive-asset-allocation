@@ -6,9 +6,9 @@ The **Defensive Asset Allocation** strategy was developed by [Wouter Keller](htt
 
 The strategy has three main groups of ETFs it allocates:
 
-- **Risky**: SPY, IWM, QQQ, VGK, EWJ, EEM, VNQ, DBC, GLD, TLT, HYG, LQD
-- **Protective**: SHY, IEF, LQD
-- **Canary**: EEM, AGG
+- **Risky**: SPY, IWM, QQQ, VGK, EWJ, VWO, VNQ, GSG, GLD, TLT, HYG, LQD
+- **Protective** (cash): SHY, IEF, LQD
+- **Canary**: VWO, BND
 
 1. On the last trading day of the month, calculate a momentum score for all the assets above
    - Momentum Score = (12*(p0/p1)) + (4*(p0/p3)) + (2*(p0/p6)) + (p0/p12) - 19
@@ -34,9 +34,10 @@ The strategy has three main groups of ETFs it allocates:
 | VNQ    | Vanguard Real Estate Index Fund ETF                 | Real Estate, U.S.                   |
 | SPY    | SPDR S&P 500 ETF                                    | Equity, U.S., Large Cap             |
 | VGK    | Vanguard FTSE Europe ETF                            | Equity, Europe, Large Cap           |
-| EEM    | iShares MSCI Emerging Markets ETF                   | Equity, Emerging Markets, Large Cap |
+| VWO    | Vanguard FTSE Emerging Markets ETF                  | Equity, Emerging Markets, Large Cap |
 | EWJ    | iShares MSCI Japan ETF                              | Equity, Japan, Large Cap            |
-| DBC    | Invesco DB Commodity Index Tracking Fund            | Commodity, Diversified              |
+| GSG    | iShares S&P GSCI Commodity-Indexed Trust            | Commodity, Diversified              |
+| BND    | Vanguard Total Bond Market ETF                      | Bond, U.S., All-Term                |
 | TLT    | iShares 20+ Year Treasury Bond ETF                  | Bond, U.S., Long-Term               |
 | GLD    | SPDR Gold Trust                                     | Commodity, Gold                     |
 | HYG    | iShares iBoxx $ High Yield Corporate Bond ETF       | Bond, U.S., Intermediate-Term       |
