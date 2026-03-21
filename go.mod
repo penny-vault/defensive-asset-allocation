@@ -2,9 +2,7 @@ module github.com/penny-vault/defensive-asset-allocation
 
 go 1.25.6
 
-replace github.com/penny-vault/pvbt => /Users/jdf/Developer/penny-vault/pvbt
-
-require github.com/penny-vault/pvbt v0.0.0-00010101000000-000000000000
+require github.com/penny-vault/pvbt v0.3.0
 
 require (
 	github.com/NimbleMarkets/ntcharts v0.4.0 // indirect

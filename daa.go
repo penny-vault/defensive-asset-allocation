@@ -104,6 +104,7 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engi
 			}
 		}
 	}
+
 	for _, a := range canaryMom.AssetList() {
 		for _, m := range canaryMom.MetricList() {
 			v := canaryMom.Value(a, m)
@@ -112,6 +113,7 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engi
 			}
 		}
 	}
+
 	for _, a := range cashMom.AssetList() {
 		for _, m := range cashMom.MetricList() {
 			v := cashMom.Value(a, m)
@@ -156,6 +158,7 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engi
 
 	if numRiskAssets > 0 {
 		riskWeight := (1.0 - cf) / float64(numRiskAssets)
+
 		for _, a := range riskMom.AssetList() {
 			if riskMom.Value(a, portfolio.Selected) > 0 {
 				members[a] += riskWeight
