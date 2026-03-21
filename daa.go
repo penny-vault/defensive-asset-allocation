@@ -20,13 +20,13 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/penny-vault/pvbt/asset"
 	"github.com/penny-vault/pvbt/data"
 	"github.com/penny-vault/pvbt/engine"
 	"github.com/penny-vault/pvbt/portfolio"
-	"github.com/penny-vault/pvbt/tradecron"
 	"github.com/penny-vault/pvbt/universe"
 )
 
@@ -45,15 +45,7 @@ func (s *DefensiveAssetAllocation) Name() string {
 	return "Defensive Asset Allocation"
 }
 
-func (s *DefensiveAssetAllocation) Setup(eng *engine.Engine) {
-	tc, err := tradecron.New("@monthend", tradecron.MarketHours{Open: 930, Close: 1600})
-	if err != nil {
-		panic(err)
-	}
-
-	eng.Schedule(tc)
-	eng.SetBenchmark(eng.Asset("VFINX"))
-}
+func (s *DefensiveAssetAllocation) Setup(_ *engine.Engine) {}
 
 func (s *DefensiveAssetAllocation) Describe() engine.StrategyDescription {
 	return engine.StrategyDescription{
@@ -62,10 +54,12 @@ func (s *DefensiveAssetAllocation) Describe() engine.StrategyDescription {
 		Source:      "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3212862",
 		Version:     "1.0.1",
 		VersionDate: time.Date(2026, 3, 14, 0, 0, 0, 0, time.UTC),
+		Schedule:    "@monthend",
+		Benchmark:   "VFINX",
 	}
 }
 
-func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engine, strategyPortfolio portfolio.Portfolio) error {
+func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engine, strategyPortfolio portfolio.Portfolio, batch *portfolio.Batch) error {
 	// Fetch 13-month window so that after monthly downsample we have >= 13 rows
 	// for Pct(12) to produce a valid value. Uses adjusted close (total return).
 	riskDF, err := s.RiskUniverse.Window(ctx, portfolio.Months(13), data.AdjClose)
@@ -102,9 +96,30 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engi
 	}
 
 	// Record momentum scores as annotations.
-	riskMom.Annotate(strategyPortfolio)
-	canaryMom.Annotate(strategyPortfolio)
-	cashMom.Annotate(strategyPortfolio)
+	for _, a := range riskMom.AssetList() {
+		for _, m := range riskMom.MetricList() {
+			v := riskMom.Value(a, m)
+			if !math.IsNaN(v) {
+				batch.Annotate(a.Ticker+"/"+string(m), strconv.FormatFloat(v, 'f', -1, 64))
+			}
+		}
+	}
+	for _, a := range canaryMom.AssetList() {
+		for _, m := range canaryMom.MetricList() {
+			v := canaryMom.Value(a, m)
+			if !math.IsNaN(v) {
+				batch.Annotate(a.Ticker+"/"+string(m), strconv.FormatFloat(v, 'f', -1, 64))
+			}
+		}
+	}
+	for _, a := range cashMom.AssetList() {
+		for _, m := range cashMom.MetricList() {
+			v := cashMom.Value(a, m)
+			if !math.IsNaN(v) {
+				batch.Annotate(a.Ticker+"/"+string(m), strconv.FormatFloat(v, 'f', -1, 64))
+			}
+		}
+	}
 
 	// Count bad canary assets: those with non-positive momentum.
 	badCanaryDF := canaryMom.CountWhere(data.AdjClose, func(v float64) bool {
@@ -119,10 +134,9 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engi
 	numRiskAssets := int(math.Round((1.0 - cf) * float64(topT)))
 
 	// Record decision values.
-	ts := eng.CurrentDate().Unix()
-	strategyPortfolio.Annotate(ts, "B", fmt.Sprintf("%d", badCanary))
-	strategyPortfolio.Annotate(ts, "CF", fmt.Sprintf("%.2f", cf))
-	strategyPortfolio.Annotate(ts, "T", fmt.Sprintf("%d", numRiskAssets))
+	batch.Annotate("B", fmt.Sprintf("%d", badCanary))
+	batch.Annotate("CF", fmt.Sprintf("%.2f", cf))
+	batch.Annotate("T", fmt.Sprintf("%d", numRiskAssets))
 
 	// Select top-T risk assets and best cash asset by momentum.
 	portfolio.TopN(max(numRiskAssets, 1), data.AdjClose).Select(riskMom)
@@ -151,7 +165,7 @@ func (s *DefensiveAssetAllocation) Compute(ctx context.Context, eng *engine.Engi
 
 	justification := fmt.Sprintf("B=%d CF=%.0f%% T=%d", badCanary, cf*100, numRiskAssets)
 
-	return strategyPortfolio.RebalanceTo(ctx, portfolio.Allocation{
+	return batch.RebalanceTo(ctx, portfolio.Allocation{
 		Date:          eng.CurrentDate(),
 		Members:       members,
 		Justification: justification,
