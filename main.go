@@ -15,8 +15,11 @@
 
 package main
 
-import "github.com/penny-vault/pvbt/cli"
+import (
+	"github.com/penny-vault/defensive-asset-allocation/daa"
+	"github.com/penny-vault/pvbt/cli"
+)
 
 func main() {
-	cli.Run(&DefensiveAssetAllocation{})
+	cli.Run(&daa.DefensiveAssetAllocation{})
 }

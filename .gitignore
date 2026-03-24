@@ -12,6 +12,6 @@ go.work
 go.work.sum
 .env
 defensive-asset-allocation
-daa
 *.db
+!daa/testdata/snapshot.db
 *.pdf

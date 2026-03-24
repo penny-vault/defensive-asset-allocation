@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package daa
 
 import (
 	"context"
@@ -34,11 +34,11 @@ import (
 var description string
 
 type DefensiveAssetAllocation struct {
-	RiskUniverse       universe.Universe `pvbt:"risk-universe" desc:"List of ETF, Mutual Fund, or Stock tickers in the risk universe" default:"SPY,IWM,QQQ,VGK,EWJ,VWO,VNQ,GSG,GLD,TLT,HYG,LQD" suggest:"DAA-G12=SPY,IWM,QQQ,VGK,EWJ,VWO,VNQ,GSG,GLD,TLT,HYG,LQD|DAA-G6=SPY,VEA,VWO,LQD,TLT,HYG|DAA1-G4=SPY,VEA,VWO,AGG|DAA1-G12=SPY,IWM,QQQ,VGK,EWJ,VWO,VNQ,GSG,GLD,TLT,HYG,LQD|DAA1-U1=SPY"`
-	ProtectiveUniverse universe.Universe `pvbt:"protective-universe" desc:"Canary universe that signals when to shift to cash" default:"VWO,BND" suggest:"DAA-G12=VWO,BND|DAA-G6=VWO,BND|DAA1-G4=VWO,BND|DAA1-G12=VWO,BND|DAA1-U1=VWO,BND"`
-	CashUniverse       universe.Universe `pvbt:"cash-universe" desc:"Safe-haven assets for defensive allocation" default:"SHY,IEF,LQD" suggest:"DAA-G12=SHY,IEF,LQD|DAA-G6=SHY,IEF,LQD|DAA1-G4=SHV,IEF,UST|DAA1-G12=SHV,IEF,UST|DAA1-U1=SHV,IEF,UST"`
-	Breadth            int               `pvbt:"breadth" desc:"Breadth parameter determining cash fraction from canary signals" default:"2" suggest:"DAA-G12=2|DAA-G6=2|DAA1-G4=1|DAA1-G12=1|DAA1-U1=1"`
-	TopT               int               `pvbt:"top-t" desc:"Number of top risk assets to invest in" default:"6" suggest:"DAA-G12=6|DAA-G6=6|DAA1-G4=4|DAA1-G12=2|DAA1-U1=1"`
+	RiskUniverse       universe.Universe `pvbt:"risk-universe" desc:"List of ETF, Mutual Fund, or Stock tickers in the risk universe" default:"SPY,IWM,QQQ,VGK,EWJ,VWO,VNQ,GSG,GLD,TLT,HYG,LQD" suggest:"DAA-G12=SPY,IWM,QQQ,VGK,EWJ,VWO,VNQ,GSG,GLD,TLT,HYG,LQD|DAA-G6=SPY,VEA,VWO,LQD,TLT,HYG|DAA1-G4=SPY,VEA,VWO,AGG|DAA1-G12=SPY,IWM,QQQ,VGK,EWJ,VWO,VNQ,GSG,GLD,TLT,HYG,LQD|DAA1-U1=SPY|AllocateSmartly=SPY,IWM,QQQ,VGK,EWJ,IEMG,VNQ,PDBC,GLD,TLT,HYG,LQD"`
+	ProtectiveUniverse universe.Universe `pvbt:"protective-universe" desc:"Canary universe that signals when to shift to cash" default:"VWO,BND" suggest:"DAA-G12=VWO,BND|DAA-G6=VWO,BND|DAA1-G4=VWO,BND|DAA1-G12=VWO,BND|DAA1-U1=VWO,BND|AllocateSmartly=VWO,BND"`
+	CashUniverse       universe.Universe `pvbt:"cash-universe" desc:"Safe-haven assets for defensive allocation" default:"SHY,IEF,LQD" suggest:"DAA-G12=SHY,IEF,LQD|DAA-G6=SHY,IEF,LQD|DAA1-G4=SHV,IEF,UST|DAA1-G12=SHV,IEF,UST|DAA1-U1=SHV,IEF,UST|AllocateSmartly=SHY,IEF,LQD"`
+	Breadth            int               `pvbt:"breadth" desc:"Breadth parameter determining cash fraction from canary signals" default:"2" suggest:"DAA-G12=2|DAA-G6=2|DAA1-G4=1|DAA1-G12=1|DAA1-U1=1|AllocateSmartly=2"`
+	TopT               int               `pvbt:"top-t" desc:"Number of top risk assets to invest in" default:"6" suggest:"DAA-G12=6|DAA-G6=6|DAA1-G4=4|DAA1-G12=2|DAA1-U1=1|AllocateSmartly=6"`
 }
 
 func (s *DefensiveAssetAllocation) Name() string {
