@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/penny-vault/defensive-asset-allocation/daa"
+	"github.com/penny-vault/pvbt/asset"
 	"github.com/penny-vault/pvbt/data"
 	"github.com/penny-vault/pvbt/engine"
 	"github.com/penny-vault/pvbt/portfolio"
@@ -72,9 +73,9 @@ var _ = Describe("DefensiveAssetAllocation", func() {
 			}
 
 			switch t.Type {
-			case portfolio.BuyTransaction:
+			case asset.BuyTransaction:
 				positions[t.Asset.Ticker] += t.Qty
-			case portfolio.SellTransaction:
+			case asset.SellTransaction:
 				positions[t.Asset.Ticker] -= t.Qty
 				if positions[t.Asset.Ticker] < 0.01 {
 					delete(positions, t.Asset.Ticker)
