@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
-	github.com/penny-vault/pvbt v0.12.1
+	github.com/penny-vault/pvbt v0.12.2
 )
 
 require (
